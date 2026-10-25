@@ -3,8 +3,11 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 import User from "../models/user.model.js";
+import BlacklistedToken from "../models/token-blacklist.model.js"
 
 import { JWT_EXPIRES_IN, JWT_SECRET } from "../config/env.js";
+
+import { hashToken } from "../utils/token.js";
 
 export const signUp = async (req, res, next) => {
     const session = await mongoose.startSession();
@@ -86,5 +89,16 @@ export const signIn = async (req, res, next) => {
 }
 
 export const signOut = async (req, res, next) => {
-    // Implement sign out logic here
+    try {
+        // We blacklist the token until its expiration, so it cannot be used again
+        await BlacklistedToken.updateOne(
+            { tokenHash: hashToken(req.token) },
+            { $setOnInsert: { expiresAt: new Date(req.tokenExp * 1000) } },
+            { upsert: true }
+        );
+
+        res.status(200).json({ success: true, message: 'User signed out successfully' });
+    } catch (error) {
+        next(error);
+    }
 }

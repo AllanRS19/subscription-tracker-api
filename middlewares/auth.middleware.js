@@ -1,7 +1,10 @@
 import jwt from "jsonwebtoken";
 
 import { JWT_SECRET } from "../config/env.js"
+import { hashToken } from "../utils/token.js";
+
 import User from "../models/user.model.js";
+import BlacklistedToken from "../models/token-blacklist.model.js";
 
 const authorize = async (req, res, next) => {
     try {
@@ -11,7 +14,14 @@ const authorize = async (req, res, next) => {
             token = req.headers.authorization.split(' ')[1];
         }
 
-        if (!token) return res.status(401).json({ message: 'Unauthorized' });
+        if (!token) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+        // A signed out token is rejected
+        const isBlackListed = await BlacklistedToken.exists({ tokenHash: hashToken(token) });
+
+        if (isBlackListed) {
+            return res.status(401).json({ success: false, message: 'Unauthorized' });
+        }
 
         const decoded = jwt.verify(token, JWT_SECRET);
 
@@ -20,6 +30,8 @@ const authorize = async (req, res, next) => {
         if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
         req.user = user;
+        req.token = token;
+        req.tokenExp = decoded.exp;
 
         next();
     } catch (error) {
