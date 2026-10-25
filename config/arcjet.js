@@ -1,6 +1,8 @@
 import arcjet, { detectBot, shield, tokenBucket } from "@arcjet/node";
 import { ARCJET_KEY } from "./env.js";
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const aj = arcjet({
     // Get your site key from https://app.arcjet.com and set it as an environment
     // variable rather than hard coding.
@@ -10,7 +12,7 @@ const aj = arcjet({
         shield({ mode: "LIVE" }),
         // Create a bot detection rule
         detectBot({
-            mode: "LIVE", // Blocks requests. Use "DRY_RUN" to log only
+            mode: isProduction ? "LIVE" : "DRY_RUN", // Blocks requests. Use "DRY_RUN" to log only
             // Block all bots except the following
             allow: [
                 "CATEGORY:SEARCH_ENGINE", // Google, Bing, etc
